@@ -1,0 +1,162 @@
+gcloud compute firewall-rules create allow-odoo-http \
+  --allow tcp:80 \
+  --direction=INGRESS \
+  --priority=1000 \
+  --network=default \
+  --target-tags odoo-server \
+  --description="Allow HTTP traffic to Odoo VM"
+
+
+gcloud compute instances create odoo18-vm \
+  --zone=us-central1-a \
+  --machine-type=e2-medium \
+  --image-family=ubuntu-2204-lts \
+  --image-project=ubuntu-os-cloud \
+  --tags=http-server,https-server,odoo-server \
+  --boot-disk-size=50GB \
+  --boot-disk-type=pd-balanced \
+  --scopes=https://www.googleapis.com/auth/cloud-platform
+
+ gcloud compute ssh odoo18-vm --zone=us-central1-a
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y git curl wget build-essential python3-pip python3-dev libxml2-dev libxslt1-dev libldap2-dev libsasl2-dev libjpeg-dev libpq-dev libffi-dev libssl-dev zlib1g-dev libjpeg8-dev
+sudo apt install -y python3-venv python3-wheel
+sudo adduser --system --home=/opt/odoo18 --group odoo18
+sudo chown odoo18: /opt/odoo18
+sudo chsh -s /bin/bash odoo18
+sudo rm -rf /opt/odoo18/*
+sudo -u odoo18 -H bash
+mkdir /opt/odoo18/odoo-server
+sudo chown odoo18:  /opt/odoo18/odoo-server
+cd /opt/odoo18/odoo-server
+git clone https://github.com/odoo/odoo --depth 1 --branch 18.0 --single-branch .
+# Create and activate venv
+python3 -m venv venv
+source venv/bin/activate
+
+# Install requirements
+pip install wheel
+sed -i '/gevent==/d' requirements.txt
+pip install "gevent==21.12.0" --only-binary :all:
+pip install -r requirements.txt
+# Deactivate venv
+deactivate
+exit
+exit
+
+gcloud services enable sqladmin.googleapis.com
+
+gcloud sql instances create odoo18-db \
+  --database-version=POSTGRES_15 \
+  --cpu=2 \
+  --memory=4GB \
+  --region=us-central1 \
+  --storage-size=50GB \
+  --availability-type=zonal
+
+
+# Create database
+gcloud sql databases create odoo18 --instance=odoo18-db
+
+# Create user
+gcloud sql users create odoo18 --instance=odoo18-db --password=your-db-password
+# to get public ip
+gcloud compute instances describe odoo18-vm --zone=us-central1-a --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+
+gcloud sql instances patch odoo18-db --authorized-networks="your-vm-ip/32"
+
+gcloud compute ssh odoo18-vm --zone=us-central1-a
+
+
+sudo nano /etc/odoo18.conf
+
+[options]
+admin_passwd = admin
+db_host = 34.9.205.152
+db_port = 5432
+db_user = odoo18
+db_password = your-db-password
+addons_path = /opt/odoo18/odoo-server/addons
+logfile = /var/log/odoo18/odoo.log
+xmlrpc_interface = 0.0.0.0
+netrpc_interface = 0.0.0.0
+proxy_mode = True
+http_interface = 0.0.0.0
+
+
+sudo chown odoo18:root /etc/odoo18.conf
+sudo chmod 640 /etc/odoo18.conf
+
+sudo nano /etc/systemd/system/odoo18.service
+
+[Unit]
+Description=Odoo18
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+SyslogIdentifier=odoo18
+PermissionsStartOnly=true
+User=odoo18
+Group=odoo18
+ExecStart=/opt/odoo18/odoo-server/venv/bin/python3 /opt/odoo18/odoo-server/odoo-bin \
+    -c /etc/odoo18.conf \
+    --proxy-mode \
+    --xmlrpc-interface=127.0.0.1 \
+    --http-interface=127.0.0.1
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
+
+
+sudo mkdir /var/log/odoo18
+sudo chown odoo18:root /var/log/odoo18
+
+sudo apt update
+sudo apt install nginx -y
+
+sudo nano /etc/nginx/sites-available/odoo18
+
+server {
+    listen 80;
+    server_name _;
+
+    access_log  /var/log/nginx/odoo_access.log;
+    error_log   /var/log/nginx/odoo_error.log;
+
+    proxy_read_timeout 720s;
+    proxy_connect_timeout 720s;
+    proxy_send_timeout 720s;
+    send_timeout 720s;
+
+    client_max_body_size 200m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8069;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+sudo ln -s /etc/nginx/sites-available/odoo18 /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+
+
+
+sudo systemctl daemon-reload
+sudo systemctl enable odoo18
+sudo systemctl start odoo18
+sudo systemctl status odoo18
+
+
+
+
+http://your-vm-ip:8069
+
