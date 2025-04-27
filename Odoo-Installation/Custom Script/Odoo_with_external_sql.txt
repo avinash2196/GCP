@@ -46,6 +46,8 @@ exit
 exit
 
 gcloud services enable sqladmin.googleapis.com
+gcloud services enable secretmanager.googleapis.com
+
 
 gcloud sql instances create odoo18-db \
   --database-version=POSTGRES_15 \
@@ -61,29 +63,45 @@ gcloud sql databases create odoo18 --instance=odoo18-db
 
 # Create user
 gcloud sql users create odoo18 --instance=odoo18-db --password=your-db-password
+
+gcloud secrets create odoo18-db-password --data-file=<(echo "your-db-password")
+
+# get service account for vm
+gcloud compute instances describe odoo18-vm --zone=us-central1-a --format="get(serviceAccounts[0].email)"
+
+#Allow access  for service account 
+gcloud secrets add-iam-policy-binding odoo18-db-password \
+  --member="serviceAccount:558517173971-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+
+
+
 # to get public ip
 gcloud compute instances describe odoo18-vm --zone=us-central1-a --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
 
 gcloud sql instances patch odoo18-db --authorized-networks="your-vm-ip/32"
 
+
+
 gcloud compute ssh odoo18-vm --zone=us-central1-a
 
-
-sudo nano /etc/odoo18.conf
-
+sudo bash -c '
+DB_PASSWORD=$(gcloud secrets versions access latest --secret=odoo18-db-password)
+cat > /etc/odoo18.conf <<EOF
 [options]
 admin_passwd = admin
 db_host = 34.9.205.152
 db_port = 5432
 db_user = odoo18
-db_password = your-db-password
+db_password = ${DB_PASSWORD}
 addons_path = /opt/odoo18/odoo-server/addons
 logfile = /var/log/odoo18/odoo.log
 xmlrpc_interface = 0.0.0.0
 netrpc_interface = 0.0.0.0
 proxy_mode = True
 http_interface = 0.0.0.0
-
+EOF
+'
 
 sudo chown odoo18:root /etc/odoo18.conf
 sudo chmod 640 /etc/odoo18.conf
