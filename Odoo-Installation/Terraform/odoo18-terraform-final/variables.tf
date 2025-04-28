@@ -10,3 +10,6 @@ variable "secret_name" {}
 variable "vm_name" {}
 variable "firewall_rule_name" {}
 variable "replica_location" {}
+variable "github_owner" {}
+variable "github_repo" {}
+variable "github_connection" {}

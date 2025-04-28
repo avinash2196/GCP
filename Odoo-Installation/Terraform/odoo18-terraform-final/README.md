@@ -35,10 +35,42 @@ echo "✅ All resources imported successfully!"
 
 ## How to Use
 
+gcloud iam service-accounts create cloudbuild-executor --display-name="Cloud Build Executor SA"
+gcloud projects add-iam-policy-binding hippa-docai-demo --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" --role="roles/compute.instanceAdmin.v1"
+Go to GCP Console → IAM & Admin → IAM
+
+Find this Service Account:
+
+css
+Copy
+Edit
+[PROJECT_NUMBER]@cloudbuild.gserviceaccount.com
+Click "Edit Permissions".
+
+Add Role:
+
+Compute Instance Admin (v1)
+
+(Optional) Also Service Account User role for maximum flexibility
+
+✅ Save.
+1: Go to GCP Console
+🔵 Open →
+Cloud Build → Triggers → (Your Project)
+
+2: Click "Connect Repository"
+Click “Manage Repositories” or “Connect Repository” (depends on GCP UI).
+
+Choose GitHub.
+
+Authorize Google Cloud to GitHub (OAuth window will open).
+
+✅ Grant access to the repository (or your GitHub organization).
+Next Steps
 1. Create a GCP Project manually (and link Billing).
 2. Upload this Terraform zip to Cloud Shell or your bucket.
 3. Unzip and configure:
-
+4. Add Trigger manually and add service account cloudbuild-executor
 ```bash
 unzip odoo18-terraform-final-superclean-fixed.zip
 cd odoo18-terraform
@@ -53,3 +85,6 @@ Then access your Odoo at `http://your-vm-public-ip/`.
 
 ---
 
+gcloud iam service-accounts keys create signed-url-key.json   --iam-account=signed-url-sa@hippa-docai-demo.iam.gserviceaccount.com
+
+gsutil signurl -d 1h signed-url-key.json gs://terraform_scripts_demo/odoo18-terraform-final.zip
