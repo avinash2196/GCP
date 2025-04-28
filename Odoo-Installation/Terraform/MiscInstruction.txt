@@ -1,0 +1,10 @@
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable odoo
+sudo systemctl start odoo
+
+sudo systemctl status odoo
+
+gsutil signurl -d 1h signed-url-key.json gs://terraform_scripts_demo/odoo18-terraform-final.zip
+
+curl -o odoo18.zip "<signed_url"
