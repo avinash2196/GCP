@@ -1,15 +1,15 @@
 steps:
-  - name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: bash
-    dir: 'Odoo-Installation/Terraform/odoo18-terraform'
-    args:
-      - -c
-      - |
-          echo "Fetching DB password from Secret Manager..."
-          gcloud secrets versions access latest --secret="odoo18-db-password" > dbpass.txt
-          DB_PASSWORD=$(cat dbpass.txt | tr -d '\n')
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: bash
+  dir: 'Odoo-Installation/Terraform/odoo18-terraform'
+  args:
+  - -c
+  - |
+      echo "Fetching DB password from Secret Manager..."
+      gcloud secrets versions access latest --secret="odoo18-db-password" > dbpass.txt
+      DB_PASSWORD=$(cat dbpass.txt | tr -d '\n')
 
-          cat <<EOF > terraform.auto.tfvars
+      cat <<EOF > terraform.auto.tfvars
 project_id         = "hippa-docai-demo"
 region             = "us-central1"
 zone               = "us-central1-a"
@@ -17,7 +17,7 @@ vm_name            = "odoo18-vm-test"
 db_instance_name   = "odoo18-db-test"
 db_name            = "odoo18-test"
 db_user_name       = "odoo18"
-db_password        = "${DBPASSWORD_PLACEHOLDER}"
+db_password        = "DBPASSWORD_PLACEHOLDER"
 secret_name        = "odoo18-db-password"
 firewall_rule_name = "allow-odoo-http-test"
 replica_location   = "us-central1"
@@ -26,17 +26,17 @@ github_owner       = "avinash2196"
 github_repo        = "OddoDemo"
 EOF
 
-          sed -i "s|\${DBPASSWORD_PLACEHOLDER}|$DB_PASSWORD|g" terraform.auto.tfvars
+      sed -i "s|DBPASSWORD_PLACEHOLDER|$DB_PASSWORD|g" terraform.auto.tfvars
 
-  - name: 'hashicorp/terraform:light'
-    entrypoint: sh
-    dir: 'Odoo-Installation/Terraform/odoo18-terraform'
-    args:
-      - -c
-      - |
-          terraform init
-          terraform plan -out=tfplan
-          terraform apply -auto-approve tfplan
+- name: 'hashicorp/terraform:light'
+  entrypoint: sh
+  dir: 'Odoo-Installation/Terraform/odoo18-terraform'
+  args:
+  - -c
+  - |
+      terraform init
+      terraform plan -out=tfplan
+      terraform apply -auto-approve tfplan
 
 options:
   logging: CLOUD_LOGGING_ONLY
