@@ -37,7 +37,40 @@ echo "✅ All resources imported successfully!"
 ## How to Use
 
 gcloud iam service-accounts create cloudbuild-executor --display-name="Cloud Build Executor SA"
-gcloud projects add-iam-policy-binding hippa-docai-demo --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" --role="roles/compute.instanceAdmin.v1"
+gcloud projects add-iam-policy-binding hippa-docai-demo \
+  --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" \
+  --role="roles/compute.admin" \
+  --condition='expression=true,title=cloudbuild-permanent-access'
+
+gcloud projects add-iam-policy-binding hippa-docai-demo \
+  --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" \
+  --role="roles/compute.instanceAdmin.v1" \
+  --condition='expression=true,title=cloudbuild-permanent-access'
+
+gcloud projects add-iam-policy-binding hippa-docai-demo \
+  --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" \
+  --role="roles/cloudsql.admin" \
+  --condition='expression=true,title=cloudbuild-permanent-access'
+
+gcloud projects add-iam-policy-binding hippa-docai-demo \
+  --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.admin" \
+  --condition='expression=true,title=cloudbuild-permanent-access'
+
+gcloud projects add-iam-policy-binding hippa-docai-demo \
+  --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser" \
+  --condition='expression=true,title=cloudbuild-permanent-access'
+
+gcloud projects add-iam-policy-binding hippa-docai-demo \
+  --member="serviceAccount:cloudbuild-executor@hippa-docai-demo.iam.gserviceaccount.com" \
+  --role="roles/logging.logWriter" \
+  --condition='expression=true,title=cloudbuild-permanent-access'
+
+
+
+
+
 Go to GCP Console → IAM & Admin → IAM
 
 Find this Service Account:
