@@ -5,29 +5,25 @@ steps:
     args:
       - -c
       - |
-          echo "Generating terraform.auto.tfvars..."
+          echo "Fetching DB password..."
           DB_PASSWORD=$(gcloud secrets versions access latest --secret="odoo18-db-password")
 
-          echo '#!/bin/bash' > generate-vars.sh
-          echo 'cat <<EOT > terraform.auto.tfvars' >> generate-vars.sh
-          echo 'project_id         = "hippa-docai-demo"' >> generate-vars.sh
-          echo 'region             = "us-central1"' >> generate-vars.sh
-          echo 'zone               = "us-central1-a"' >> generate-vars.sh
-          echo 'vm_name            = "odoo18-vm-test"' >> generate-vars.sh
-          echo 'db_instance_name   = "odoo18-db-test"' >> generate-vars.sh
-          echo 'db_name            = "odoo18-test"' >> generate-vars.sh
-          echo 'db_user_name       = "odoo18"' >> generate-vars.sh
-          echo "db_password        = \"$DB_PASSWORD\"" >> generate-vars.sh
-          echo 'secret_name        = "odoo18-db-password"' >> generate-vars.sh
-          echo 'firewall_rule_name = "allow-odoo-http-test"' >> generate-vars.sh
-          echo 'replica_location   = "us-central1"' >> generate-vars.sh
-          echo 'github_connection  = "AvinashGitConnection"' >> generate-vars.sh
-          echo 'github_owner       = "avinash2196"' >> generate-vars.sh
-          echo 'github_repo        = "OddoDemo"' >> generate-vars.sh
-          echo 'EOT' >> generate-vars.sh
-
-          chmod +x generate-vars.sh
-          ./generate-vars.sh
+          cat > terraform.auto.tfvars <<EOT
+project_id         = "hippa-docai-demo"
+region             = "us-central1"
+zone               = "us-central1-a"
+vm_name            = "odoo18-vm-test"
+db_instance_name   = "odoo18-db-test"
+db_name            = "odoo18-test"
+db_user_name       = "odoo18"
+db_password        = "${DB_PASSWORD}"
+secret_name        = "odoo18-db-password"
+firewall_rule_name = "allow-odoo-http-test"
+replica_location   = "us-central1"
+github_connection  = "AvinashGitConnection"
+github_owner       = "avinash2196"
+github_repo        = "OddoDemo"
+EOT
 
   - name: 'hashicorp/terraform:light'
     entrypoint: sh
