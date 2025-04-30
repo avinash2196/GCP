@@ -5,10 +5,11 @@ steps:
     args:
       - -c
       - |
-          echo "Fetching DB password..."
-          DB_PASS=$(gcloud secrets versions access latest --secret="odoo18-db-password")
+          echo "Fetching password and writing terraform.auto.tfvars..."
+          echo -n 'db_password        = "' > terraform.auto.tfvars
+          gcloud secrets versions access latest --secret="odoo18-db-password" >> terraform.auto.tfvars
+          echo '"' >> terraform.auto.tfvars
 
-          echo "db_password = \"$DB_PASS\"" > terraform.auto.tfvars
           echo 'project_id         = "hippa-docai-demo"'         >> terraform.auto.tfvars
           echo 'region             = "us-central1"'             >> terraform.auto.tfvars
           echo 'zone               = "us-central1-a"'           >> terraform.auto.tfvars
