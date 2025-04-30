@@ -31,6 +31,16 @@ steps:
       - -c
       - |
           terraform init
+
+          echo "Attempting to import pre-existing resources..."
+
+          terraform import -allow-missing-config google_sql_database_instance.odoo_db_instance projects/hippa-docai-demo/instances/odoo18-db-test || true
+          terraform import -allow-missing-config google_sql_database.odoo_db projects/hippa-docai-demo/instances/odoo18-db-test/databases/odoo18-test || true
+          terraform import -allow-missing-config google_sql_user.odoo_db_user hippa-docai-demo/odoo18-db-test/odoo18 || true
+          terraform import -allow-missing-config google_secret_manager_secret.odoo_db_password projects/hippa-docai-demo/secrets/odoo18-db-password || true
+          terraform import -allow-missing-config google_secret_manager_secret_version.odoo_db_password_version projects/hippa-docai-demo/secrets/odoo18-db-password/versions/1 || true
+          terraform import -allow-missing-config google_compute_firewall.allow_odoo_http projects/hippa-docai-demo/global/firewalls/allow-odoo-http-test || true
+
           terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
 
