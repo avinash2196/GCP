@@ -16,7 +16,7 @@ steps:
           db_instance_name   = "odoo18-db-test"
           db_name            = "odoo18-test"
           db_user_name       = "odoo18"
-          db_password        = "\${DB_PASSWORD}"
+          db_password        = "\\${DB_PASSWORD}"
           secret_name        = "odoo18-db-password"
           firewall_rule_name = "allow-odoo-http-test"
           replica_location   = "us-central1"
