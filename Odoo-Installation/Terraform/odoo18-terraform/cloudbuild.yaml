@@ -15,7 +15,7 @@ steps:
           echo 'db_instance_name   = "odoo18-db-test"'          >> terraform.auto.tfvars
           echo 'db_name            = "odoo18-test"'             >> terraform.auto.tfvars
           echo 'db_user_name       = "odoo18"'                  >> terraform.auto.tfvars
-          echo "db_password        = \"$DB_PASSWORD\""          >> terraform.auto.tfvars
+          echo db_password        = \"\\$DB_PASSWORD\"          >> terraform.auto.tfvars
           echo 'secret_name        = "odoo18-db-password"'      >> terraform.auto.tfvars
           echo 'firewall_rule_name = "allow-odoo-http-test"'    >> terraform.auto.tfvars
           echo 'replica_location   = "us-central1"'             >> terraform.auto.tfvars
