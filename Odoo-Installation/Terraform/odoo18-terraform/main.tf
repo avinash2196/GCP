@@ -27,7 +27,7 @@ provider "google-beta" {
 data "google_compute_default_service_account" "default" {}
 
 data "google_secret_manager_secret_version" "db_password" {
-  secret  = google_secret_manager_secret.odoo_db_password.id
+  secret  = var.secret_name
   version = "latest"
 }
 
@@ -61,9 +61,9 @@ resource "google_sql_database_instance" "odoo_db_instance" {
   region           = var.region
 
   settings {
-    tier              = "db-custom-2-4096"
+    tier = "db-custom-2-4096"
     availability_type = "ZONAL"
-    disk_size         = 50
+    disk_size = 50
     ip_configuration {
       authorized_networks {
         value = "0.0.0.0/0"
@@ -89,7 +89,7 @@ resource "google_sql_database" "odoo_db" {
 resource "google_sql_user" "odoo_db_user" {
   name     = var.db_user_name
   instance = google_sql_database_instance.odoo_db_instance.name
-  password = base64decode(data.google_secret_manager_secret_version.db_password.secret_data)
+  password = data.google_secret_manager_secret_version.db_password.secret_data
 }
 
 resource "google_secret_manager_secret" "odoo_db_password" {
@@ -140,79 +140,88 @@ resource "google_compute_instance" "odoo_vm" {
   }
 
   metadata_startup_script = <<-EOT
-#!/bin/bash
-set -e
+    #!/bin/bash
+    apt update
+    apt install -y git curl wget build-essential python3-pip python3-dev libxml2-dev libxslt1-dev libldap2-dev libsasl2-dev libjpeg-dev libpq-dev libffi-dev libssl-dev zlib1g-dev libjpeg8-dev python3-venv python3-wheel nginx
 
-apt update
-apt install -y git curl wget build-essential python3-pip python3-dev libxml2-dev libxslt1-dev libldap2-dev libsasl2-dev libjpeg-dev libpq-dev libffi-dev libssl-dev zlib1g-dev libjpeg8-dev python3-venv python3-wheel nginx
+    useradd -r -m -d /opt/odoo18 odoo18
+    cd /opt/odoo18
+    sudo -u odoo18 git clone https://github.com/odoo/odoo --depth 1 --branch 18.0 odoo-server
+    cd /opt/odoo18/odoo-server
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install wheel
+    sed -i "/gevent==/d" requirements.txt
+    pip install "gevent==21.12.0" --only-binary :all:
+    pip install -r requirements.txt
+    deactivate
+    mkdir -p /var/log/odoo18
+    chown odoo18:root /var/log/odoo18
+    mkdir -p /opt/odoo18/odoo-server/custom_addons
+    chown odoo18:root /opt/odoo18/odoo-server/custom_addons
 
-useradd -r -m -d /opt/odoo18 odoo18
-cd /opt/odoo18
-sudo -u odoo18 git clone https://github.com/odoo/odoo --depth 1 --branch 18.0 odoo-server
-cd /opt/odoo18/odoo-server
-python3 -m venv venv
-source venv/bin/activate
-pip install wheel
-sed -i "/gevent==/d" requirements.txt
-pip install "gevent==21.12.0" --only-binary :all:
-pip install -r requirements.txt
-deactivate
+    cat <<EOF > /etc/nginx/sites-available/odoo
+    server {
+      listen 80;
+      server_name _;
+      access_log  /var/log/nginx/odoo_access.log;
+      error_log   /var/log/nginx/odoo_error.log;
+      proxy_read_timeout 720s;
+      proxy_connect_timeout 720s;
+      proxy_send_timeout 720s;
+      send_timeout 720s;
+      client_max_body_size 200m;
+      location / {
+        proxy_pass http://127.0.0.1:8069;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+    }
+    EOF
 
-mkdir -p /var/log/odoo18 /opt/odoo18/odoo-server/custom_addons
-chown odoo18:root /var/log/odoo18 /opt/odoo18/odoo-server/custom_addons
+    ln -s /etc/nginx/sites-available/odoo /etc/nginx/sites-enabled/odoo
+    rm -f /etc/nginx/sites-enabled/default
+    nginx -t && systemctl reload nginx
 
-cat <<EOF > /etc/nginx/sites-available/odoo
-server {
-  listen 80;
-  server_name _;
-  access_log /var/log/nginx/odoo_access.log;
-  error_log /var/log/nginx/odoo_error.log;
-  location / {
-    proxy_pass http://127.0.0.1:8069;
-    proxy_set_header Host \$host;
-    proxy_set_header X-Real-IP \$remote_addr;
-    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto \$scheme;
-  }
-}
-EOF
+    DB_PASSWORD=$(gcloud secrets versions access latest --secret=${var.secret_name})
+    cat <<EOF > /etc/odoo18.conf
+    [options]
+    admin_passwd = admin
+    db_host = ${google_sql_database_instance.odoo_db_instance.ip_address[0].ip_address}
+    db_port = 5432
+    db_user = odoo18
+    db_password = $DB_PASSWORD
+    addons_path = /opt/odoo18/odoo-server/addons,/opt/odoo18/odoo-server/custom_addons
+    logfile = /var/log/odoo18/odoo.log
+    xmlrpc_interface = 0.0.0.0
+    netrpc_interface = 0.0.0.0
+    proxy_mode = True
+    http_interface = 0.0.0.0
+    EOF
 
-ln -s /etc/nginx/sites-available/odoo /etc/nginx/sites-enabled/odoo
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
+    cat <<EOF > /etc/systemd/system/odoo18.service
+    [Unit]
+    Description=Odoo18
+    Requires=network.target
+    After=network.target
 
-cat <<EOF > /etc/odoo18.conf
-[options]
-admin_passwd = admin
-db_host = ${google_sql_database_instance.odoo_db_instance.ip_address[0].ip_address}
-db_port = 5432
-db_user = odoo18
-db_password = ${base64decode(data.google_secret_manager_secret_version.db_password.secret_data)}
-addons_path = /opt/odoo18/odoo-server/addons,/opt/odoo18/odoo-server/custom_addons
-logfile = /var/log/odoo18/odoo.log
-xmlrpc_interface = 0.0.0.0
-netrpc_interface = 0.0.0.0
-proxy_mode = True
-http_interface = 0.0.0.0
-EOF
+    [Service]
+    Type=simple
+    SyslogIdentifier=odoo18
+    PermissionsStartOnly=true
+    User=root
+    Group=root
+    ExecStart=/opt/odoo18/odoo-server/venv/bin/python3 /opt/odoo18/odoo-server/odoo-bin -c /etc/odoo18.conf
+    StandardOutput=journal+console
 
-cat <<EOF > /etc/systemd/system/odoo18.service
-[Unit]
-Description=Odoo18
-After=network.target
+    [Install]
+    WantedBy=multi-user.target
+    EOF
 
-[Service]
-Type=simple
-User=root
-ExecStart=/opt/odoo18/odoo-server/venv/bin/python3 /opt/odoo18/odoo-server/odoo-bin -c /etc/odoo18.conf
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable odoo18
-systemctl start odoo18
+    systemctl daemon-reload
+    systemctl enable odoo18
+    systemctl start odoo18
   EOT
 }
