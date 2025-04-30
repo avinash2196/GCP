@@ -1,15 +1,14 @@
-
 variable "project_id" {}
 variable "region" {}
 variable "zone" {}
-variable "db_password" {}
+variable "vm_name" {}
 variable "db_instance_name" {}
 variable "db_name" {}
 variable "db_user_name" {}
+variable "db_password" {}
 variable "secret_name" {}
-variable "vm_name" {}
 variable "firewall_rule_name" {}
 variable "replica_location" {}
+variable "github_connection" {}
 variable "github_owner" {}
 variable "github_repo" {}
-variable "github_connection" {}

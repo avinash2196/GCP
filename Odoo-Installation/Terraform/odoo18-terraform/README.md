@@ -1,3 +1,4 @@
+gcloud services enable cloudbuild.googleapis.com secretmanager.googleapis.com sqladmin.googleapis.com compute.googleapis.com
 
 # Odoo 18 GCP Deployment Using Terraform
 

@@ -1,32 +1,39 @@
 steps:
-  - name: 'hashicorp/terraform:light'
-    entrypoint: 'sh'
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash
+    dir: 'terraform'
     args:
       - -c
       - |
-          echo "Initializing Terraform..."
+          echo "Generating terraform.auto.tfvars with secret value..."
+          DB_PASSWORD=$(gcloud secrets versions access latest --secret="odoo18-db-password")
+
+          cat <<EOF > terraform.auto.tfvars
+          project_id         = "hippa-docai-demo"
+          region             = "us-central1"
+          zone               = "us-central1-a"
+          vm_name            = "odoo18-vm-test"
+          db_instance_name   = "odoo18-db-test"
+          db_name            = "odoo18-test"
+          db_user_name       = "odoo18"
+          db_password        = "\${DB_PASSWORD}"
+          secret_name        = "odoo18-db-password"
+          firewall_rule_name = "allow-odoo-http-test"
+          replica_location   = "us-central1"
+          github_connection  = "AvinashGitConnection"
+          github_owner       = "avinash2196"
+          github_repo        = "OddoDemo"
+          EOF
+
+  - name: 'hashicorp/terraform:light'
+    entrypoint: sh
+    dir: 'terraform'
+    args:
+      - -c
+      - |
           terraform init
-
-          echo "Importing Cloud SQL Instance..."
-          terraform import google_sql_database_instance.odoo_db_instance projects/hippa-docai-demo/instances/odoo18-db-test
-
-          echo "Importing Cloud SQL Database..."
-          terraform import google_sql_database.odoo_db projects/hippa-docai-demo/instances/odoo18-db-test/databases/odoo18-test
-
-          echo "Importing Cloud SQL User..."
-          terraform import google_sql_user.odoo_db_user hippa-docai-demo/odoo18-db-test/odoo18
-
-          echo "Importing Secret Manager Secret..."
-          terraform import google_secret_manager_secret.odoo_db_password projects/hippa-docai-demo/secrets/odoo18-db-password
-
-          echo "Importing Firewall Rule..."
-          terraform import google_compute_firewall.allow_odoo_http projects/hippa-docai-demo/global/firewalls/allow-odoo-http-test
-
-          echo "Importing Compute VM..."
-          terraform import google_compute_instance.odoo_vm projects/hippa-docai-demo/zones/us-central1-a/instances/odoo18-vm-test
-
-          echo "Applying Terraform configuration..."
-          terraform apply -auto-approve
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
 
 options:
   logging: CLOUD_LOGGING_ONLY
