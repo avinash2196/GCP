@@ -1,23 +1,37 @@
-- name: 'gcr.io/cloud-builders/gcloud'
-  entrypoint: bash
-  dir: 'Odoo-Installation/Terraform/odoo18-terraform'
-  args:
-    - -c
-    - |
-        echo "Fetching DB password from Secret Manager..."
-        DB_PASSWORD=$(gcloud secrets versions access latest --secret="odoo18-db-password")
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash
+    dir: 'Odoo-Installation/Terraform/odoo18-terraform'
+    args:
+      - -c
+      - |
+          echo "Fetching DB password from Secret Manager..."
+          DB_PASSWORD=$(gcloud secrets versions access latest --secret="odoo18-db-password")
 
-        echo "db_password        = \"$DB_PASSWORD\"" > terraform.auto.tfvars
-        echo 'project_id         = "hippa-docai-demo"'         >> terraform.auto.tfvars
-        echo 'region             = "us-central1"'             >> terraform.auto.tfvars
-        echo 'zone               = "us-central1-a"'           >> terraform.auto.tfvars
-        echo 'vm_name            = "odoo18-vm-test"'          >> terraform.auto.tfvars
-        echo 'db_instance_name   = "odoo18-db-test"'          >> terraform.auto.tfvars
-        echo 'db_name            = "odoo18-test"'             >> terraform.auto.tfvars
-        echo 'db_user_name       = "odoo18"'                  >> terraform.auto.tfvars
-        echo 'secret_name        = "odoo18-db-password"'      >> terraform.auto.tfvars
-        echo 'firewall_rule_name = "allow-odoo-http-test"'    >> terraform.auto.tfvars
-        echo 'replica_location   = "us-central1"'             >> terraform.auto.tfvars
-        echo 'github_connection  = "AvinashGitConnection"'    >> terraform.auto.tfvars
-        echo 'github_owner       = "avinash2196"'             >> terraform.auto.tfvars
-        echo 'github_repo        = "OddoDemo"'                >> terraform.auto.tfvars
+          echo "db_password        = \"$DB_PASSWORD\"" > terraform.auto.tfvars
+          echo 'project_id         = "hippa-docai-demo"'         >> terraform.auto.tfvars
+          echo 'region             = "us-central1"'             >> terraform.auto.tfvars
+          echo 'zone               = "us-central1-a"'           >> terraform.auto.tfvars
+          echo 'vm_name            = "odoo18-vm-test"'          >> terraform.auto.tfvars
+          echo 'db_instance_name   = "odoo18-db-test"'          >> terraform.auto.tfvars
+          echo 'db_name            = "odoo18-test"'             >> terraform.auto.tfvars
+          echo 'db_user_name       = "odoo18"'                  >> terraform.auto.tfvars
+          echo 'secret_name        = "odoo18-db-password"'      >> terraform.auto.tfvars
+          echo 'firewall_rule_name = "allow-odoo-http-test"'    >> terraform.auto.tfvars
+          echo 'replica_location   = "us-central1"'             >> terraform.auto.tfvars
+          echo 'github_connection  = "AvinashGitConnection"'    >> terraform.auto.tfvars
+          echo 'github_owner       = "avinash2196"'             >> terraform.auto.tfvars
+          echo 'github_repo        = "OddoDemo"'                >> terraform.auto.tfvars
+
+  - name: 'hashicorp/terraform:light'
+    entrypoint: sh
+    dir: 'Odoo-Installation/Terraform/odoo18-terraform'
+    args:
+      - -c
+      - |
+          terraform init
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
+
+options:
+  logging: CLOUD_LOGGING_ONLY
