@@ -160,7 +160,7 @@ resource "google_compute_instance" "odoo_vm" {
     mkdir -p /opt/odoo18/odoo-server/custom_addons
     chown odoo18:root /opt/odoo18/odoo-server/custom_addons
 
-    cat <<EOF > /etc/nginx/sites-available/odoo
+    cat <<'EOF' > /etc/nginx/sites-available/odoo
     server {
       listen 80;
       server_name _;
