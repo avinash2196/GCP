@@ -196,7 +196,7 @@ provider "google-beta" {
 	db_host = ${google_sql_database_instance.odoo_db_instance.ip_address[0].ip_address}
 	db_port = 5432
 	db_user = odoo18
-	db_password = \$DB_PASSWORD
+	db_password = $${DB_PASSWORD}
 	addons_path = /opt/odoo18/odoo-server/addons,/opt/odoo18/odoo-server/custom_addons
 	logfile = /var/log/odoo18/odoo.log
 	xmlrpc_interface = 0.0.0.0
