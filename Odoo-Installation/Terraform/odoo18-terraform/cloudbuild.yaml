@@ -1,33 +1,33 @@
 steps:
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: bash
-    dir: 'terraform'
+    dir: 'Odoo-Installation/Terraform/odoo18-terraform'
     args:
       - -c
       - |
           echo "Generating terraform.auto.tfvars with secret value..."
           DB_PASSWORD=$(gcloud secrets versions access latest --secret="odoo18-db-password")
 
-          cat <<EOF > terraform.auto.tfvars
-          project_id         = "hippa-docai-demo"
-          region             = "us-central1"
-          zone               = "us-central1-a"
-          vm_name            = "odoo18-vm-test"
-          db_instance_name   = "odoo18-db-test"
-          db_name            = "odoo18-test"
-          db_user_name       = "odoo18"
-          db_password        = "\\${DB_PASSWORD}"
-          secret_name        = "odoo18-db-password"
-          firewall_rule_name = "allow-odoo-http-test"
-          replica_location   = "us-central1"
-          github_connection  = "AvinashGitConnection"
-          github_owner       = "avinash2196"
-          github_repo        = "OddoDemo"
-          EOF
+          cat > terraform.auto.tfvars <<EOF
+project_id         = "hippa-docai-demo"
+region             = "us-central1"
+zone               = "us-central1-a"
+vm_name            = "odoo18-vm-test"
+db_instance_name   = "odoo18-db-test"
+db_name            = "odoo18-test"
+db_user_name       = "odoo18"
+db_password        = "${DB_PASSWORD}"
+secret_name        = "odoo18-db-password"
+firewall_rule_name = "allow-odoo-http-test"
+replica_location   = "us-central1"
+github_connection  = "AvinashGitConnection"
+github_owner       = "avinash2196"
+github_repo        = "OddoDemo"
+EOF
 
   - name: 'hashicorp/terraform:light'
     entrypoint: sh
-    dir: 'terraform'
+    dir: 'Odoo-Installation/Terraform/odoo18-terraform'
     args:
       - -c
       - |
