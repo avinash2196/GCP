@@ -39,6 +39,7 @@ steps:
           terraform import "google_secret_manager_secret.odoo_db_password" "projects/hippa-docai-demo/secrets/odoo18-db-password" || true
           terraform import "google_secret_manager_secret_version.odoo_db_password_version" "projects/hippa-docai-demo/secrets/odoo18-db-password/versions/1" || true
           terraform import "google_compute_firewall.allow_odoo_http" "projects/hippa-docai-demo/global/firewalls/allow-odoo-http-test" || true
+          terraform import "google_compute_instance.odoo_vm" "projects/hippa-docai-demo/zones/us-central1-a/instances/odoo18-vm-test" || true
 
           terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
